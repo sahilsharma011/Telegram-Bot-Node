@@ -17,13 +17,14 @@ export default class Kick extends Plugin {
     onCommand({message, command, args}, reply) {
         let target;
         if (args.length === 1) target = Number(args[0]);
-        else if (message.reply_to_message.new_chat_participant)
-            target = message.reply_to_message.new_chat_participant.id;
-        else if (message.reply_to_message.left_chat_participant)
-            target = message.reply_to_message.left_chat_participant.id;
-        else if (message.reply_to_message)
-            target = message.reply_to_message.from.id;
-        else
+        else if (message.reply_to_message) {
+            if (message.reply_to_message.new_chat_participant)
+                target = message.reply_to_message.new_chat_participant.id;
+            else if (message.reply_to_message.left_chat_participant)
+                target = message.reply_to_message.left_chat_participant.id;
+            else
+                target = message.reply_to_message.from.id;
+        } else
             target = null;
 
         const banned = this.db[message.chat.id];
@@ -47,7 +48,7 @@ export default class Kick extends Plugin {
             if (!Auth.isMod(message.from.id)) return;
             if (!target) return reply({
                 type: "text",
-                text: "Reply to a message sent by the kickee with /kick or /ban to remove him. Alternatively, use /kick or /ban followed by the user ID (eg. /kick 1234), which you can get from /list."
+                text: "Reply to a message sent by the kickee with /kick or /ban to remove him. Alternatively, use /kick or /ban followed by the user ID (eg. /kick 1234), which you can get with `/id username` if the UserInfo plugin is enabled."
             });
             if (Auth.isMod(target)) return reply({
                 type: "text",
@@ -62,7 +63,7 @@ export default class Kick extends Plugin {
             if (!Auth.isMod(message.from.id)) return;
             if (!target) return reply({
                 type: "text",
-                text: "Reply to a message sent by the kickee with /kick or /ban to remove him. Alternatively, use /kick or /ban followed by the user ID (eg. /kick 1234), which you can get from /list."
+                text: "Reply to a message sent by the kickee with /kick or /ban to remove him. Alternatively, use /kick or /ban followed by the user ID (eg. /kick 1234), which you can get with `/id username` if the UserInfo plugin is enabled."
             });
             if (Auth.isMod(target)) return reply({
                 type: "text",
@@ -80,7 +81,7 @@ export default class Kick extends Plugin {
             if (!Auth.isMod(message.from.id)) return;
             if (!target) return reply({
                 type: "text",
-                text: "Reply to a message sent by the kickee with /kick or /ban to remove him. Alternatively, use /kick or /ban followed by the user ID (eg. /kick 1234), which you can get from /list."
+                text: "Reply to a message sent by the kickee with /kick or /ban to remove him. Alternatively, use /kick or /ban followed by the user ID (eg. /kick 1234), which you can get with `/id username` if the UserInfo plugin is enabled."
             });
             if (!banned) return;
             this.db[message.chat.id] = banned.filter(id => id !== target);

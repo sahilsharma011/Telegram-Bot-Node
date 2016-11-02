@@ -1,8 +1,11 @@
 language: node_js
 node_js:
-  - '0.10' # Version of nodejs in the Ubuntu repository
   - 'node' # Latest stable version
   - '6'    # Latest "current" version
+cache:
+  directories:
+    - node_modules
 script:
-  - node node_modules/.bin/eslint src/
-  - node node_modules/.bin/babel src/ -d dist/
+  - npm run lint
+  - npm run build
+  - npm test

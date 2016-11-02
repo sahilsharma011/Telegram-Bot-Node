@@ -56,13 +56,12 @@ export default class Plugin {
 
         if (this.plugin.needs) {
             if (this.plugin.needs.database) {
-                let serialized;
                 try {
-                    serialized = fs.readFileSync(`./plugin_${this.plugin.name}.json`, "utf8");
+                    const serialized = fs.readFileSync(`./plugin_${this.plugin.name}.json`, "utf8");
+                    this.db = JSON.parse(serialized);
                 } catch (e) {
-                    serialized = "{}";
+                    this.db = {};
                 }
-                this.db = JSON.parse(serialized);
             }
         }
 
@@ -73,9 +72,15 @@ export default class Plugin {
         // text
         if (typeof this.onText === 'function')
             this.listener.on("text", (...args) => this.onText(...args));
-        // commands
+        // inline query
+        if (typeof this.onInline === 'function')
+            this.listener.on("inline_query", (...args) => this.onInline(...args));
+        // text command
         if (typeof this.onCommand === 'function')
             this.listener.on("_command", (...args) => this.onCommand(...args));
+        // inline command
+        if (typeof this.onInlineCommand === 'function')
+            this.listener.on("_inline_command", (...args) => this.onInlineCommand(...args));
 
         // media
         if (typeof this.onAudio === 'function')

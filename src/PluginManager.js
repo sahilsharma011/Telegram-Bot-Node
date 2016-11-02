@@ -22,6 +22,9 @@ export default class PluginManager {
             case "text":
                 return bot.sendMessage(chatId, reply.text, reply.options);
 
+            case "inline":
+                return bot.answerInlineQuery(chatId, reply.results, reply.options);
+
             case "audio":
                 return bot.sendAudio(chatId, reply.audio, reply.options);
             case "document":
@@ -38,12 +41,20 @@ export default class PluginManager {
             case "status": case "chatAction":
                 return bot.sendChatAction(chatId, reply.status, reply.options);
 
-            default:
-                this.log.error(`Unrecognized reply type ${reply.type}`);
+            default: {
+                const message = `Unrecognized reply type ${reply.type}`;
+                this.log.error(message);
+                return Promise.reject(message);
+            }
             }
         };
 
-        const events = ["text", "audio", "document", "photo", "sticker", "video", "voice", "contact", "location", "new_chat_participant", "left_chat_participant", "new_chat_title", "new_chat_photo", "delete_chat_photo", "group_chat_created"];
+        const events = [
+            "text", "audio", "document", "photo", "sticker", "video", "voice", "contact", "location",
+            "inline_query", "chosen_inline_request",
+            "new_chat_participant", "left_chat_participant", "group_chat_created",
+            "new_chat_title", "new_chat_photo", "delete_chat_photo"
+        ];
         // Registers a handler for every Telegram event.
         // It runs the message through the proxy and forwards it to the plugin manager.
         for (const eventName of events) {
@@ -100,7 +111,12 @@ export default class PluginManager {
                     .then(message => this.emit(
                         eventName,
                         message,
-                        reply => handleReply(message.chat.id, reply)
+                        eventName === "inline_query" ?
+                            reply => handleReply(message.id, reply) :
+                            reply => handleReply(message.chat.id, reply),
+                        eventName === "inline_query" ?
+                            null :
+                            (target, fromChatId, messageId) => bot.forwardMessage(target, fromChatId, messageId)
                     ))
                     .catch(err => {
                         if (err) this.log.error("Message rejected with error", err);
@@ -167,18 +183,29 @@ export default class PluginManager {
         return Promise.all(this.plugins.map(pl => pl.stop()));
     }
 
-    emit(event, message, callback) {
+    emit(event, message, ...callbacks) {
         this.log.debug(`Triggered event ${event}`);
 
         // Command emitter
-        const regex = /^[\/!]([a-z0-9_]+)(?:@[a-z0-9_]+)?(?: (.*))?/i;
-        if (regex.test(message.text)) {
-            const parts = message.text.match(regex);
-            const command = parts[1].toLowerCase();
-            const args = parts[2] ? parts[2].split(" ") : [];
-            this.emitter.emit("_command", {message, command, args}, callback);
+        if (message.text !== undefined && message.entities && message.entities[0].type === "bot_command") {
+            const entity = message.entities[0];
+
+            const rawCommand = message.text.slice(entity.offset + 1, entity.offset + entity.length);
+            const [command, _] = rawCommand.replace(/\//, "").split("@");
+
+            let args = [];
+            if (entity.offset + entity.length < message.text.length) {
+                args = message.text.slice(entity.offset + entity.length + 1).split(" ");
+            }
+
+            this.emitter.emit("_command", {message, command, args}, ...callbacks);
+        } else if (message.query !== undefined) {
+            const parts = message.query.split(" ");
+            const command = parts[0].toLowerCase();
+            const args = parts.length > 1 ? parts.slice(1) : [];
+            this.emitter.emit("_inline_command", {message, command, args}, ...callbacks);
         }
 
-        this.emitter.emit(event, message, callback);
+        this.emitter.emit(event, message, ...callbacks);
     }
 }

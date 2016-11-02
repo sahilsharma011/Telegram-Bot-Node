@@ -19,6 +19,9 @@ export default class RateLimiter extends Plugin {
     oldThreshold = 60; // Reject messages older than this many seconds
 
     proxy(eventName, message) {
+        // Ignore inline messages
+        if (!message.chat) return Promise.resolve();
+
         const now = (new Date()).getTime();
         const author = message.from.id;
         const lastMessage = this.lastMessages[author];
@@ -34,6 +37,6 @@ export default class RateLimiter extends Plugin {
         }
 
         this.lastMessages[author] = now;
-        return Promise.resolve(message);
+        return Promise.resolve();
     }
 }

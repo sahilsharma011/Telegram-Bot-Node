@@ -1,5 +1,6 @@
 import Plugin from "./../Plugin";
-const safe = require("safe-regex");
+import Auth from "./../helpers/Auth";
+import safe from "safe-regex";
 
 export default class RegexSet extends Plugin {
 
@@ -31,13 +32,11 @@ export default class RegexSet extends Plugin {
 
             let replacement = item.text;
             replacement = replacement.replace(/$0/g, replacement);
-            for (let i = 0; i < matches.length; i++) {
-                console.log(i, matches[i]);
+            for (let i = 0; i < matches.length; i++)
                 replacement = replacement.replace(
                     new RegExp("\\$" + String(i + 1), "g"),
                     matches[i]
                 );
-            }
             replacement = replacement.replace(/\$name/g, message.from.first_name);
             replacement = replacement.replace(/\$username/g, message.from.username);
             reply({type: "text", text: replacement});
@@ -46,14 +45,25 @@ export default class RegexSet extends Plugin {
 
     onCommand({message, command, args}, reply) {
         const chatID = message.chat.id;
+        const author = message.from.id;
         switch (command) {
         case "regexset":
+            if (!Auth.isMod(author, chatID))
+                return reply({
+                    type: "text",
+                    text: "RegexSet is restricted to mods."
+                });
             this.regexset(args, reply, chatID);
             return;
         case "regexlist":
             this.regexlist(args, reply, chatID);
             return;
         case "regexdelete":
+            if (!Auth.isMod(author, chatID))
+                return reply({
+                    type: "text",
+                    text: "RegexSet is restricted to mods."
+                });
             this.regexdelete(args, reply, chatID);
             return;
         default:
